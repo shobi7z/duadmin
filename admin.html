@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة المشرف</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c0fe 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .admin-container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        .admin-container h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .admin-container input,
+        .admin-container button {
+            width: calc(100% - 22px);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .admin-container input[type="text"] {
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+        .admin-container button {
+            border: none;
+            background-color: #28a745;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .admin-container button:hover {
+            background-color: #218838;
+        }
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            color: #007BFF;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+        import { getDatabase, ref, set, update, remove } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA-UOXh6rNrNEFmbYO2VD4Z3lX-k_087LY",
+            authDomain: "vndrt-e4be6.firebaseapp.com",
+            databaseURL: "https://vndrt-e4be6-default-rtdb.firebaseio.com",
+            projectId: "vndrt-e4be6",
+            storageBucket: "vndrt-e4be6.appspot.com",
+            messagingSenderId: "272358874564",
+            appId: "1:272358874564:web:05061e5303fc02f78cd891",
+            measurementId: "G-K8R33G55XR"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        function addOrder() {
+            const orderNumber = document.getElementById('orderNumber').value;
+            const orderDetails = document.getElementById('orderDetails').value;
+            if (orderNumber && orderDetails) {
+                set(ref(database, 'orders/' + orderNumber), {
+                    details: orderDetails
+                }).then(() => {
+                    alert('تم إضافة الطلب رقم: ' + orderNumber);
+                }).catch((error) => {
+                    console.error('خطأ في إضافة البيانات: ', error);
+                });
+            } else {
+                alert('يرجى إدخال جميع التفاصيل.');
+            }
+        }
+
+        function updateOrder() {
+            const orderNumber = document.getElementById('orderNumber').value;
+            const orderDetails = document.getElementById('orderDetails').value;
+            if (orderNumber && orderDetails) {
+                update(ref(database, 'orders/' + orderNumber), {
+                    details: orderDetails
+                }).then(() => {
+                    alert('تم تحديث الطلب رقم: ' + orderNumber);
+                }).catch((error) => {
+                    console.error('خطأ في تحديث البيانات: ', error);
+                });
+            } else {
+                alert('يرجى إدخال جميع التفاصيل.');
+            }
+        }
+
+        function deleteOrder() {
+            const orderNumber = document.getElementById('orderNumber').value;
+            if (orderNumber) {
+                remove(ref(database, 'orders/' + orderNumber)).then(() => {
+                    alert('تم حذف الطلب رقم: ' + orderNumber);
+                }).catch((error) => {
+                    console.error('خطأ في حذف البيانات: ', error);
+                });
+            } else {
+                alert('يرجى إدخال رقم الطلب.');
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div class="admin-container">
+    <h1>إدارة الطلبات</h1>
+    <input type="text" id="orderNumber" placeholder="رقم الطلب">
+    <input type="text" id="orderDetails" placeholder="تفاصيل الطلب">
+    <button onclick="addOrder()">إضافة طلب</button>
+    <button onclick="updateOrder()">تحديث طلب</button>
+    <button onclick="deleteOrder()">حذف طلب</button>
+    <a href="index.html" class="back-link">العودة إلى صفحة التتبع</a>
+</div>
+
+</body>
+</html>
