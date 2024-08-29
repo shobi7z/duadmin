@@ -2,115 +2,322 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تتبع الطلبات</title>
+    <title>عرض المنتجات</title>
+    <!-- تضمين خط Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Firebase Configuration -->
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics.js";
+      import { getFirestore, collection, getDocs, doc, updateDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyA8REbmJrO7jRXhWiKYzUY5fEKUbwu0Q7c",
+        authDomain: "dupeel.firebaseapp.com",
+        databaseURL: "https://dupeel-default-rtdb.firebaseio.com",
+        projectId: "dupeel",
+        storageBucket: "dupeel.appspot.com",
+        messagingSenderId: "887640383214",
+        appId: "1:887640383214:web:6fad12ebbc4ca311519dff",
+        measurementId: "G-KFRJ2VZ3QH"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+      const db = getFirestore(app);
+
+      // دالة لتحميل المنتجات من Firestore وعرضها في الصفحة
+      async function loadProducts() {
+          const querySnapshot = await getDocs(collection(db, "shipments"));
+          const productsContainer = document.getElementById('productsContainer');
+          productsContainer.innerHTML = ''; // مسح المحتويات الحالية
+
+          querySnapshot.forEach((docSnap) => {
+              const data = docSnap.data();
+              const productDiv = document.createElement('div');
+              productDiv.classList.add('shipment');
+
+              let productsHTML = `
+                  <h3>رقم الشحنة: ${data.trackingNumber}</h3>
+                  ${data.products.map((product, index) => `
+                      <div class="product-item">
+                          <p>المنتج ${index + 1}: <a href="${product.link}" target="_blank">${product.link}</a></p>
+                          <p>الكمية: ${product.quantity}</p>
+                          <button class="edit-btn" onclick="editProduct('${docSnap.id}', ${index})">تعديل</button>
+                          <button class="delete-btn" onclick="deleteProduct('${docSnap.id}', ${index})">حذف</button>
+                      </div>
+                  `).join('')}
+                  <button class="delete-shipment" onclick="deleteShipment('${docSnap.id}')">حذف الشحنة</button>
+              `;
+
+              productDiv.innerHTML = productsHTML;
+              productsContainer.appendChild(productDiv);
+          });
+      }
+
+      // تحميل المنتجات عند فتح الصفحة
+      window.onload = loadProducts;
+
+      // دالة لحذف المنتج
+      window.deleteProduct = async function(shipmentId, productIndex) {
+          if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
+              const docRef = doc(db, "shipments", shipmentId);
+              const docSnap = await getDoc(docRef);
+              if (docSnap.exists()) {
+                  const products = docSnap.data().products;
+                  products.splice(productIndex, 1); // إزالة المنتج من القائمة
+                  await updateDoc(docRef, { products: products });
+                  loadProducts(); // إعادة تحميل المنتجات
+              } else {
+                  console.error("المستند غير موجود!");
+              }
+          }
+      };
+
+      // دالة لتعديل المنتج
+      window.editProduct = async function(shipmentId, productIndex) {
+          const docRef = doc(db, "shipments", shipmentId);
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+              const data = docSnap.data();
+              const product = data.products[productIndex];
+
+              // تعبئة النموذج بالبيانات الحالية
+              document.getElementById('productLink').value = product.link;
+              document.getElementById('productQuantity').value = product.quantity;
+              document.getElementById('saveChanges').onclick = async () => {
+                  const updatedProduct = {
+                      link: document.getElementById('productLink').value,
+                      quantity: document.getElementById('productQuantity').value
+                  };
+                  data.products[productIndex] = updatedProduct;
+                  await updateDoc(docRef, { products: data.products });
+                  closeModal();
+                  loadProducts(); // إعادة تحميل المنتجات
+              };
+
+              openModal();
+          } else {
+              console.error("المستند غير موجود!");
+          }
+      };
+
+      // دالة لحذف الشحنة
+      window.deleteShipment = async function(shipmentId) {
+          if (confirm('هل أنت متأكد من حذف الشحنة مع جميع منتجاتها؟')) {
+              try {
+                  await deleteDoc(doc(db, "shipments", shipmentId));
+                  loadProducts(); // إعادة تحميل المنتجات
+              } catch (error) {
+                  console.error("حدث خطأ أثناء حذف الشحنة: ", error);
+              }
+          }
+      };
+
+      function openModal() {
+          document.getElementById('editModal').style.display = 'flex';
+      }
+
+      function closeModal() {
+          document.getElementById('editModal').style.display = 'none';
+      }
+    </script>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #74ebd5 0%, #ACB6E5 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            font-family: 'Cairo', sans-serif;
+            background-color: #f9f9f9;
+            padding: 0;
             margin: 0;
+            color: #333;
         }
-        .track-container {
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
             background-color: #ffffff;
             padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            width: 100%;
-            max-width: 400px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
         }
-        .track-container h1 {
+        h2 {
+            text-align: center;
             color: #333;
             margin-bottom: 20px;
             font-size: 24px;
+            font-weight: 700;
         }
-        .track-container input[type="text"] {
-            width: calc(100% - 22px);
-            padding: 12px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
+        .shipment {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #ffffff;
             border-radius: 8px;
-            font-size: 16px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
-        .track-container button {
-            width: 100%;
-            padding: 12px;
-            border: none;
+        .shipment h3 {
+            margin-top: 0;
+            color: #007bff;
+            font-size: 20px;
+        }
+        .product-item {
+            border: 1px solid #e1e1e1;
             border-radius: 8px;
-            background-color: #007BFF;
-            color: #fff;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #fafafa;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         }
-        .track-container button:hover {
-            background-color: #0056b3;
+        .product-item p {
+            margin: 0 0 10px 0;
+            color: #555;
         }
-        .admin-link {
-            display: block;
-            margin-top: 20px;
-            color: #007BFF;
+        .product-item a {
+            color: #007bff;
             text-decoration: none;
-            font-size: 16px;
         }
-        .admin-link:hover {
+        .product-item a:hover {
             text-decoration: underline;
         }
-    </style>
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
-        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
-
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyA-UOXh6rNrNEFmbYO2VD4Z3lX-k_087LY",
-            authDomain: "vndrt-e4be6.firebaseapp.com",
-            databaseURL: "https://vndrt-e4be6-default-rtdb.firebaseio.com",
-            projectId: "vndrt-e4be6",
-            storageBucket: "vndrt-e4be6.appspot.com",
-            messagingSenderId: "272358874564",
-            appId: "1:272358874564:web:05061e5303fc02f78cd891",
-            measurementId: "G-K8R33G55XR"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const database = getDatabase(app);
-
-        function trackOrder() {
-            const orderNumber = document.getElementById('orderNumber').value;
-            if (orderNumber) {
-                const orderRef = ref(database, 'orders/' + orderNumber);
-                get(orderRef).then((snapshot) => {
-                    if (snapshot.exists()) {
-                        alert('تتبع الطلب رقم: ' + orderNumber + '\nتفاصيل: ' + snapshot.val().details);
-                    } else {
-                        alert('طلب غير موجود.');
-                    }
-                }).catch((error) => {
-                    console.error('خطأ في قراءة البيانات: ', error);
-                });
-            } else {
-                alert('يرجى إدخال رقم الطلب.');
-            }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 5px;
+            transition: background-color 0.3s ease;
         }
-    </script>
+        button:hover {
+            background-color: #0056b3;
+        }
+        .edit-btn {
+            background-color: #007bff;
+        }
+        .edit-btn:hover {
+            background-color: #0056b3;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        .delete-shipment {
+            background-color: #dc3545;
+            display: block;
+            margin: 10px 0 0 auto;
+        }
+        .delete-shipment:hover {
+            background-color: #c82333;
+        }
+        /* Styles for modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding-top: 60px;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #ffffff;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .modal-header {
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 20px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .modal-body label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .modal-body input {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .modal-body button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .modal-body button:hover {
+            background-color: #218838;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h2>عرض المنتجات</h2>
+        <div id="productsContainer">
+            <!-- سيتم تحميل المنتجات هنا -->
+        </div>
+    </div>
 
-<div class="track-container">
-    <h1>تتبع طلبك</h1>
-    <input type="text" id="orderNumber" placeholder="أدخل رقم الطلب">
-    <button onclick="trackOrder()">تتبع طلبك</button>
-    <a href="admin.html" class="admin-link">صفحة المشرف</a>
-</div>
-
+    <!-- نافذة تعديل المنتج -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div class="modal-header">
+                <h2>تعديل المنتج</h2>
+            </div>
+            <div class="modal-body">
+                <form id="editProductForm">
+                    <label for="productLink">رابط المنتج:</label>
+                    <input type="text" id="productLink" required><br>
+                    <label for="productQuantity">الكمية:</label>
+                    <input type="number" id="productQuantity" required><br>
+                    <button type="button" id="saveChanges">حفظ التعديلات</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
